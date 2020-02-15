@@ -176,13 +176,25 @@ func (c *Conn) Connect() (*IdentifyResponse, error) {
 		Timeout:   c.config.DialTimeout,
 	}
 
+	var tcpConn *net.TCPConn
+
 	conn, err := dialer.Dial("tcp", c.addr)
 	if err != nil {
-		return nil, err
+		connDialer := c.delegate.GetDialer()
+		if connDialer != nil {
+			tcpConn, err = connDialer(c.addr)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		tcpConn = conn.(*net.TCPConn)
 	}
-	c.conn = conn.(*net.TCPConn)
-	c.r = conn
-	c.w = conn
+
+	c.conn = tcpConn
+	c.r = tcpConn
+	c.w = tcpConn
 
 	_, err = c.Write(MagicV2)
 	if err != nil {

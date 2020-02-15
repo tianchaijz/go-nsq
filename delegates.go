@@ -1,10 +1,15 @@
 package nsq
 
-import "time"
+import (
+	"net"
+	"time"
+)
 
 type logger interface {
 	Output(calldepth int, s string) error
 }
+
+type dialerFunc = func(addr string) (*net.TCPConn, error)
 
 // LogLevel specifies the severity of a given log message
 type LogLevel int
@@ -60,6 +65,9 @@ func (d *connMessageDelegate) OnTouch(m *Message) { d.c.onMessageTouch(m) }
 // ConnDelegate is an interface of methods that are used as
 // callbacks in Conn
 type ConnDelegate interface {
+	// GetDialer is called when connecting directly failed
+	GetDialer() dialerFunc
+
 	// OnResponse is called when the connection
 	// receives a FrameTypeResponse from nsqd
 	OnResponse(*Conn, []byte)
@@ -108,6 +116,7 @@ type consumerConnDelegate struct {
 	r *Consumer
 }
 
+func (d *consumerConnDelegate) GetDialer() dialerFunc                 { return nil }
 func (d *consumerConnDelegate) OnResponse(c *Conn, data []byte)       { d.r.onConnResponse(c, data) }
 func (d *consumerConnDelegate) OnError(c *Conn, data []byte)          { d.r.onConnError(c, data) }
 func (d *consumerConnDelegate) OnMessage(c *Conn, m *Message)         { d.r.onConnMessage(c, m) }
@@ -126,6 +135,7 @@ type producerConnDelegate struct {
 	w *Producer
 }
 
+func (d *producerConnDelegate) GetDialer() dialerFunc                 { return d.w.getDialer() }
 func (d *producerConnDelegate) OnResponse(c *Conn, data []byte)       { d.w.onConnResponse(c, data) }
 func (d *producerConnDelegate) OnError(c *Conn, data []byte)          { d.w.onConnError(c, data) }
 func (d *producerConnDelegate) OnMessage(c *Conn, m *Message)         {}

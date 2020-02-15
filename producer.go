@@ -30,6 +30,9 @@ type Producer struct {
 	conn   producerConn
 	config Config
 
+	dialer      dialerFunc
+	dialerGuard sync.RWMutex
+
 	logger   []logger
 	logLvl   LogLevel
 	logGuard sync.RWMutex
@@ -114,6 +117,20 @@ func (w *Producer) Ping() error {
 	}
 
 	return w.conn.WriteCommand(Nop())
+}
+
+func (w *Producer) SetDialer(dialer dialerFunc) {
+	w.dialerGuard.Lock()
+	defer w.dialerGuard.Unlock()
+
+	w.dialer = dialer
+}
+
+func (w *Producer) getDialer() dialerFunc {
+	w.dialerGuard.RLock()
+	defer w.dialerGuard.RUnlock()
+
+	return w.dialer
 }
 
 // SetLogger assigns the logger to use as well as a level
