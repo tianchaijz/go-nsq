@@ -180,6 +180,8 @@ func (c *Conn) Connect() (*IdentifyResponse, error) {
 
 	conn, err := dialer.Dial("tcp", c.addr)
 	if err != nil {
+		c.log(LogLevelError, "[%s] failed to connect - %s", c.addr, err)
+
 		connDialer := c.delegate.GetDialer()
 		if connDialer != nil {
 			tcpConn, err = connDialer(c.addr)
